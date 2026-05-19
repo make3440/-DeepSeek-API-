@@ -1,0 +1,39 @@
+# 社区用药AI助手 - Docker Compose配置
+version: '3.8'
+
+services:
+  medication-assistant:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    container_name: medication-assistant
+    ports:
+      - "8000:8000"
+    environment:
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY}
+      - DEEPSEEK_API_BASE=${DEEPSEEK_API_BASE:-https://api.deepseek.com/v1}
+      - REQUIRE_API_KEY=false
+    volumes:
+      # 可选：挂载配置文件
+      - ./config.env:/app/config.env:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  # 可选：使用Nginx作为反向代理和静态文件服务器
+  nginx:
+    image: nginx:alpine
+    container_name: medication-nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./docker/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./docker/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - medication-assistant
+    restart: unless-stopped
